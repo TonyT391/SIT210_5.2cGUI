@@ -1,0 +1,53 @@
+import RPi.GPIO as GPIO
+import tkinter as tk
+
+GPIO.setmode(GPIO.BCM)
+led_pins = {17: "blue", 27: "red", 22: "green"}
+led_states = {17: False, 27: False, 22: False}
+led_pwms = {}
+
+for led_pin in led_pins:
+    GPIO.setup(led_pin, GPIO.OUT)
+    led_pwms[led_pin] = GPIO.PWM(led_pin, 1000)  # Initialize PWM with 1kHz frequency
+    led_pwms[led_pin].start(0)  # Start PWM with 0% duty cycle
+
+def toggle_led(pin):
+    if led_states[pin]:
+        led_pwms[pin].ChangeDutyCycle(0)
+        led_states[pin] = False
+        print(f"LED {led_pins[pin]} OFF")
+    else:
+        led_pwms[pin].ChangeDutyCycle(100)
+        led_states[pin] = True
+        print(f"LED {led_pins[pin]} ON")
+
+def update_pwm(pin, duty_cycle):
+    led_pwms[pin].ChangeDutyCycle(duty_cycle)
+    print(f"LED {led_pins[pin]} intensity: {duty_cycle}%")
+
+def on_closing():
+    for pwm in led_pwms.values():
+        pwm.stop()
+    GPIO.cleanup()
+    root.destroy()
+
+root = tk.Tk()
+root.title("LED Controller")
+
+for pin, color in led_pins.items():
+    frame = tk.Frame(root)
+    frame.pack(pady=10)
+
+    btn = tk.Button(frame, text=f"Toggle {color} LED", command=lambda p=pin: toggle_led(p))
+    btn.pack(side=tk.LEFT)
+
+    slider = tk.Scale(frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                      label=f"{color} LED Intensity", command=lambda value, p=pin: update_pwm(p, int(value)))
+    slider.pack(side=tk.RIGHT)
+
+exit_btn = tk.Button(root, text="Exit", command=on_closing)
+exit_btn.pack(pady=10)
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
+
+root.mainloop()
